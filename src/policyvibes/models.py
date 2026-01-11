@@ -1,4 +1,4 @@
-"""Data models for the compliance scanner."""
+"""Data models for PolicyVibes."""
 
 from dataclasses import dataclass, field
 from enum import Enum

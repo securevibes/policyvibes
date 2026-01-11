@@ -1,1 +1,1 @@
-"""Tests for AI Compliance Scanner."""
+"""Tests for PolicyVibes."""
