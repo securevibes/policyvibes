@@ -11,13 +11,11 @@ poetry install
 ## Usage
 
 ```bash
-# LLM-powered scan (requires Claude Agent SDK)
+# Scan a repository for ToS violations (requires Claude Agent SDK)
 policyvibes scan <path>
-
-# Fast regex-only scan
-policyvibes scan-regex <path>
-policyvibes scan-regex ./my-repo --output json
-policyvibes scan-regex ./my-repo --severity active
+policyvibes scan <path> --model opus
+policyvibes scan <path> --output json
+policyvibes scan <path> --severity active
 
 # List available detection skills
 policyvibes list-skills

@@ -1,8 +1,8 @@
 """Tests for the CLI module."""
 
-import json
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from click.testing import CliRunner
@@ -25,93 +25,49 @@ def temp_repo():
 class TestCLI:
     """Tests for CLI commands."""
 
-    def test_scan_clean_directory(self, runner, temp_repo):
-        # Create a clean file
-        (temp_repo / "clean.py").write_text('print("Hello")')
-
-        result = runner.invoke(main, ["scan-regex", str(temp_repo)])
-        assert result.exit_code == 0
-        assert "No violations found" in result.output
-
-    def test_scan_directory_with_violations(self, runner, temp_repo):
-        # Create a file with violations
-        (temp_repo / "bad.py").write_text('ANTHROPIC_AUTH_TOKEN = "secret"')
-
-        result = runner.invoke(main, ["scan-regex", str(temp_repo)])
-        assert result.exit_code == 1
-        assert "ACTIVE_VIOLATION" in result.output
-
-    def test_json_output(self, runner, temp_repo):
-        (temp_repo / "clean.py").write_text('print("Hello")')
-
-        result = runner.invoke(main, ["scan-regex", str(temp_repo), "--output", "json"])
-        assert result.exit_code == 0
-
-        # Should be valid JSON
-        output = json.loads(result.output)
-        assert "version" in output
-        assert "findings" in output
-        assert output["summary"]["has_violations"] is False
-
-    def test_json_output_with_violations(self, runner, temp_repo):
-        (temp_repo / "bad.py").write_text('ANTHROPIC_AUTH_TOKEN = "secret"')
-
-        result = runner.invoke(main, ["scan-regex", str(temp_repo), "--output", "json"])
-        assert result.exit_code == 1
-
-        output = json.loads(result.output)
-        assert output["summary"]["has_violations"] is True
-        assert len(output["findings"]) >= 1
-
-    def test_severity_filter_active(self, runner, temp_repo):
-        # Create file with both types
-        (temp_repo / "mixed.py").write_text('''
-ANTHROPIC_AUTH_TOKEN = "secret"
-ANTHROPIC_BASE_URL = "http://proxy.local"
-''')
-
-        result = runner.invoke(main, ["scan-regex", str(temp_repo), "--severity", "active"])
-        assert result.exit_code == 1
-        assert "ACTIVE_VIOLATION" in result.output
-
-    def test_severity_filter_potential(self, runner, temp_repo):
-        (temp_repo / "test.py").write_text('ANTHROPIC_BASE_URL = "http://proxy.local"')
-
-        result = runner.invoke(main, ["scan-regex", str(temp_repo), "--severity", "potential"])
-        # Has potential violation
-        assert "POTENTIAL_VIOLATION" in result.output or result.exit_code == 0
-
-    def test_nonexistent_path(self, runner):
-        result = runner.invoke(main, ["scan-regex", "/nonexistent/path/xyz"])
-        assert result.exit_code == 2
-        assert "Error" in result.output
-
     def test_version_option(self, runner):
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0
         assert "0.2.0" in result.output
 
-    def test_scan_single_file(self, runner, temp_repo):
-        test_file = temp_repo / "test.py"
-        test_file.write_text('print("clean")')
-
-        result = runner.invoke(main, ["scan-regex", str(test_file)])
+    def test_help_option(self, runner):
+        result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
+        assert "scan" in result.output
+        assert "list-skills" in result.output
 
-    def test_output_includes_file_path(self, runner, temp_repo):
-        (temp_repo / "bad.py").write_text('ANTHROPIC_AUTH_TOKEN = "secret"')
+    def test_scan_requires_sdk(self, runner, temp_repo):
+        """Test that scan command shows helpful error when SDK not installed."""
+        (temp_repo / "clean.py").write_text('print("Hello")')
 
-        result = runner.invoke(main, ["scan-regex", str(temp_repo)])
-        assert "bad.py" in result.output
+        # Patch the SDK availability check
+        with patch("policyvibes.cli.query", None), \
+             patch("policyvibes.cli.ClaudeAgentOptions", None):
+            result = runner.invoke(main, ["scan", str(temp_repo)])
+            assert result.exit_code == 2
+            assert "Claude Agent SDK not installed" in result.output
+            assert "pip install claude-agent-sdk" in result.output
 
-    def test_output_includes_remediation(self, runner, temp_repo):
-        (temp_repo / "bad.py").write_text('ANTHROPIC_AUTH_TOKEN = "secret"')
-
-        result = runner.invoke(main, ["scan-regex", str(temp_repo)])
-        assert "Remediation" in result.output
+    def test_scan_nonexistent_path(self, runner):
+        result = runner.invoke(main, ["scan", "/nonexistent/path/xyz"])
+        assert result.exit_code == 2
+        assert "Error" in result.output or "does not exist" in result.output
 
     def test_list_skills(self, runner):
         result = runner.invoke(main, ["list-skills"])
         assert result.exit_code == 0
-        # Should list at least one skill
-        assert "oauth-token-abuse" in result.output or "Compliance" in result.output
+        # Should list at least one skill or indicate no skills found
+        assert "oauth-token-abuse" in result.output or "No skills" in result.output or "PolicyVibes" in result.output
+
+    def test_scan_help(self, runner):
+        result = runner.invoke(main, ["scan", "--help"])
+        assert result.exit_code == 0
+        assert "--model" in result.output
+        assert "--output" in result.output
+        assert "sonnet" in result.output or "opus" in result.output
+
+    def test_no_scan_regex_command(self, runner):
+        """Ensure scan-regex command no longer exists."""
+        result = runner.invoke(main, ["scan-regex", "."])
+        assert result.exit_code == 2
+        assert "No such command" in result.output

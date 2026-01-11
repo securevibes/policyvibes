@@ -10,11 +10,17 @@ PolicyVibes is a Claude Agent SDK-based ToS violation detection agent. It identi
 # Install dependencies
 poetry install
 
-# Run the scanner (regex mode)
-poetry run policyvibes scan-regex /path/to/repo
-
-# Run LLM-powered scan (requires Claude Agent SDK)
+# Scan a repository (requires Claude Agent SDK)
 poetry run policyvibes scan /path/to/repo
+
+# Scan with different model
+poetry run policyvibes scan /path/to/repo --model opus
+
+# JSON output
+poetry run policyvibes scan /path/to/repo --output json
+
+# Filter by severity
+poetry run policyvibes scan /path/to/repo --severity active
 
 # List available skills
 poetry run policyvibes list-skills
@@ -24,9 +30,6 @@ poetry run pytest -v
 
 # Run tests with coverage
 poetry run pytest --cov=policyvibes --cov-report=term-missing
-
-# JSON output
-poetry run policyvibes scan-regex /path/to/repo --output json
 ```
 
 ## Project Structure
@@ -66,7 +69,7 @@ tests/
 ### Claude Agent SDK Integration
 
 PolicyVibes is designed as a Claude Agent SDK agent that can be:
-1. Used standalone via CLI (`policyvibes scan-regex` or `policyvibes scan`)
+1. Used standalone via CLI (`policyvibes scan`)
 2. Integrated as a subagent in SecureVibes
 
 ```python
@@ -124,5 +127,5 @@ NEVER run git commit or git push without explicit human approval. Always show th
 
 ```bash
 # Exit code 0 = clean, 1 = violations found, 2 = error
-poetry run policyvibes scan-regex . && echo "Clean" || echo "Violations found"
+poetry run policyvibes scan . && echo "Clean" || echo "Violations found"
 ```

@@ -22,12 +22,12 @@ from .agent import create_policyvibes_agent_definition, load_prompt
 
 console = Console()
 
-# Check if SDK is available
+# Import Claude Agent SDK (required for LLM-powered scanning)
 try:
     from claude_agent_sdk import query, ClaudeAgentOptions
-    SDK_AVAILABLE = True
 except ImportError:
-    SDK_AVAILABLE = False
+    query = None
+    ClaudeAgentOptions = None
 
 
 async def run_agent_scan(repo_path: str, model: str = "sonnet") -> dict:
@@ -40,7 +40,7 @@ async def run_agent_scan(repo_path: str, model: str = "sonnet") -> dict:
     Returns:
         Dictionary with scan results
     """
-    if not SDK_AVAILABLE:
+    if query is None or ClaudeAgentOptions is None:
         raise RuntimeError(
             "Claude Agent SDK not installed. "
             "Install with: pip install claude-agent-sdk"
@@ -195,11 +195,10 @@ def scan(path: str, model: str, output: str):
         1 - Violations found
         2 - Error occurred
     """
-    if not SDK_AVAILABLE:
+    if query is None or ClaudeAgentOptions is None:
         console.print(
             "[red]Claude Agent SDK not installed.[/red]\n"
-            "Install with: pip install claude-agent-sdk\n\n"
-            "For regex-only scanning, use: policyvibes scan-regex"
+            "Install with: pip install claude-agent-sdk"
         )
         sys.exit(2)
 
@@ -227,49 +226,6 @@ def scan(path: str, model: str, output: str):
                 sys.exit(1)
 
         sys.exit(0)
-
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-        sys.exit(2)
-
-
-@main.command("scan-regex")
-@click.argument("path", type=click.Path(exists=True))
-@click.option(
-    "--output", "-o",
-    type=click.Choice(["text", "json"]),
-    default="text",
-    help="Output format (default: text)",
-)
-@click.option(
-    "--severity", "-s",
-    type=click.Choice(["all", "active", "potential"]),
-    default="all",
-    help="Filter by severity level (default: all)",
-)
-def scan_regex(path: str, output: str, severity: str):
-    """Run regex-only scan (no LLM, faster but less accurate).
-
-    This is a fallback mode that uses pattern matching without
-    Claude Agent SDK. It's faster but doesn't provide context-aware
-    analysis or intelligent remediation.
-    """
-    from .detector import PolicyVibesScanner
-    from .models import Severity, ScanResult
-
-    try:
-        scanner = PolicyVibesScanner()
-        result = scanner.scan(Path(path))
-
-        if output == "json":
-            _output_json(result, severity)
-        else:
-            _output_text(result, severity)
-
-        if result.has_violations:
-            sys.exit(1)
-        else:
-            sys.exit(0)
 
     except Exception as e:
         console.print(f"[red]Error: {e}[/red]")
@@ -316,87 +272,6 @@ def list_skills():
                 console.print(f"\n  [cyan]{name}[/cyan]")
                 if description:
                     console.print(f"    {description}")
-
-
-def _output_text(result, severity_filter: str):
-    """Output regex results as text."""
-    from .models import Severity
-
-    console.print(Panel(
-        f"[bold]PolicyVibes v{__version__} (Regex Mode)[/bold]\n"
-        f"Scanning: {result.repo_path}",
-        style="blue",
-    ))
-    console.print()
-
-    findings = result.findings
-
-    if severity_filter == "active":
-        findings = [f for f in findings if f.severity == Severity.ACTIVE_VIOLATION]
-    elif severity_filter == "potential":
-        findings = [f for f in findings if f.severity == Severity.POTENTIAL_VIOLATION]
-
-    if not findings:
-        console.print("[green]No violations found.[/green]")
-    else:
-        for finding in findings:
-            severity_colors = {
-                Severity.ACTIVE_VIOLATION: "red",
-                Severity.POTENTIAL_VIOLATION: "yellow",
-            }
-            color = severity_colors.get(finding.severity, "white")
-
-            console.print(f"[{color}]{finding.severity.value}[/{color}] [{finding.pattern_type.value}]")
-            console.print(f"  File: [blue]{finding.file_path}:{finding.line_number}[/blue]")
-            console.print(f"  Code: {finding.context[:80]}...")
-            console.print(f"  [green]Remediation: {finding.remediation}[/green]")
-            console.print()
-
-    console.print(Panel(
-        f"[bold]Summary[/bold]\n"
-        f"Files scanned: {result.files_scanned}\n"
-        f"Active violations: [red]{len(result.active_violations)}[/red]\n"
-        f"Potential violations: [yellow]{len(result.potential_violations)}[/yellow]",
-        style="dim",
-    ))
-
-
-def _output_json(result, severity_filter: str):
-    """Output regex results as JSON."""
-    from .models import Severity
-
-    findings = result.findings
-
-    if severity_filter == "active":
-        findings = [f for f in findings if f.severity == Severity.ACTIVE_VIOLATION]
-    elif severity_filter == "potential":
-        findings = [f for f in findings if f.severity == Severity.POTENTIAL_VIOLATION]
-
-    output = {
-        "version": __version__,
-        "mode": "regex",
-        "repo_path": str(result.repo_path),
-        "files_scanned": result.files_scanned,
-        "summary": {
-            "active_violations": len(result.active_violations),
-            "potential_violations": len(result.potential_violations),
-            "has_violations": result.has_violations,
-        },
-        "findings": [
-            {
-                "file_path": str(f.file_path),
-                "line_number": f.line_number,
-                "severity": f.severity.value,
-                "pattern_type": f.pattern_type.value,
-                "matched_text": f.matched_text,
-                "context": f.context,
-                "remediation": f.remediation,
-            }
-            for f in findings
-        ],
-    }
-
-    print(json.dumps(output, indent=2))
 
 
 if __name__ == "__main__":
