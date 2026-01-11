@@ -39,18 +39,11 @@ src/policyvibes/
 ├── __init__.py         # Package exports
 ├── agent.py            # AgentDefinition for SecureVibes integration
 ├── cli.py              # Click CLI interface
-├── detector.py         # PolicyVibesScanner (loads skills dynamically)
 ├── models.py           # Data models (Finding, ScanResult, Severity)
 ├── prompts/
 │   └── main.txt        # Agent orchestration prompt
-├── tools/
-│   └── pattern_scan.py # MCP tool for pattern scanning
-└── skills/
-    ├── __init__.py     # Skill loader
-    ├── base.py         # BaseSkill abstract class
-    └── anthropic/      # Anthropic provider skill
-        ├── SKILL.md    # Skill metadata
-        └── patterns.py # Detection patterns
+└── tools/
+    └── pattern_scan.py # MCP tool for pattern scanning
 
 .claude/skills/compliance/  # Detection skills (SKILL.md format)
 ├── oauth-token-abuse/
@@ -59,9 +52,7 @@ src/policyvibes/
 └── subscription-routing/
 
 tests/
-├── test_cli.py         # CLI tests
-├── test_detector.py    # Scanner tests
-└── test_patterns.py    # Pattern detection tests
+└── test_cli.py         # CLI tests
 ```
 
 ## Architecture
@@ -95,7 +86,6 @@ mkdir -p .claude/skills/compliance/new-violation-type
 # 2. Create SKILL.md with detection methodology
 # 3. Create examples.md with real-world examples
 # 4. Create reference/patterns.py with regex patterns
-# 5. Add tests in tests/test_patterns.py
 ```
 
 ## What It Detects
