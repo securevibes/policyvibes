@@ -40,10 +40,8 @@ src/policyvibes/
 ├── agent.py            # AgentDefinition for SecureVibes integration
 ├── cli.py              # Click CLI interface
 ├── models.py           # Data models (Finding, ScanResult, Severity)
-├── prompts/
-│   └── main.txt        # Agent orchestration prompt
-└── tools/
-    └── pattern_scan.py # MCP tool for pattern scanning
+└── prompts/
+    └── main.txt        # Agent orchestration prompt
 
 .claude/skills/compliance/  # Detection skills (SKILL.md format)
 ├── oauth-token-abuse/
