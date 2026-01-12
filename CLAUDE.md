@@ -39,7 +39,6 @@ src/policyvibes/
 ├── __init__.py         # Package exports
 ├── agent.py            # AgentDefinition for SecureVibes integration
 ├── cli.py              # Click CLI interface
-├── models.py           # Data models (Finding, ScanResult, Severity)
 └── prompts/
     └── main.txt        # Agent orchestration prompt
 
@@ -50,6 +49,7 @@ src/policyvibes/
 └── subscription-routing/
 
 tests/
+├── test_agent.py       # Agent definition tests
 └── test_cli.py         # CLI tests
 ```
 
