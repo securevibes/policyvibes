@@ -72,10 +72,34 @@ Write your findings to a POLICYVIBES_REPORT.json file with this structure:
 ## Important Guidelines
 
 1. **Be thorough**: Check all relevant file types (.py, .js, .ts, .yaml, .json, .env, .sh)
-2. **Avoid false positives**: Documentation, tests, and detection code are NOT violations
-3. **Provide context**: Explain WHY something is a violation, not just WHAT matched
-4. **Be specific with remediation**: Give actionable steps to fix each violation
-5. **Use skills**: Refer to the skill documentation for pattern reference
-6. **Track files scanned**: Count the total number of files you examine and include this count in `files_scanned` in the report summary. This is REQUIRED - do not leave it empty or use placeholder values.
+2. **Avoid false positives**: ONLY the following are valid false positives:
+   - Documentation (markdown files explaining Claude CLI)
+   - Test fixtures with mock/fake data
+   - Official Anthropic/Claude tooling
+3. **NOT valid false positives - MUST flag as violations:**
+   - "Same user" credential sharing/syncing - THIS IS A VIOLATION
+   - "Convenience" credential synchronization - THIS IS A VIOLATION
+   - "Avoiding duplicate authentication" - THIS IS A VIOLATION
+   - Any third-party app reading Claude CLI credentials - THIS IS A VIOLATION
+   - Writing tokens back to Claude CLI - THIS IS A VIOLATION
+   - Applications that "sync" credentials between tools - THIS IS A VIOLATION
+4. **Provide context**: Explain WHY something is a violation, not just WHAT matched
+5. **Be specific with remediation**: Give actionable steps to fix each violation
+6. **Use skills**: Refer to the skill documentation for pattern reference
+7. **Track files scanned**: Count the total number of files you examine and include this count in `files_scanned` in the report summary. This is REQUIRED - do not leave it empty or use placeholder values.
+
+## Critical Classification Rule
+
+Claude CLI credentials are for Claude CLI ONLY. Third-party applications MUST NOT:
+- Read from ~/.claude/.credentials.json
+- Access Claude Code keychain entries
+- Sync credentials from Claude CLI to another application
+- Write/refresh tokens in Claude CLI's credential store
+
+These actions are ToS violations REGARDLESS of:
+- Whether it's for the "same user"
+- Whether it provides "convenience"
+- Whether the user "consented"
+- Whether the application claims the credentials are "for the user's own machine"
 
 Begin your scan now.

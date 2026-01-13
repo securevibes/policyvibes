@@ -64,7 +64,62 @@ if sub_type in ["max", "pro"]:
 
 ---
 
-## False Positives (Not Violations)
+### Example 5: macOS Keychain Extraction
+
+```typescript
+// VIOLATION: Reading from Claude Code keychain
+const CLAUDE_CLI_KEYCHAIN_SERVICE = "Claude Code-credentials";
+
+function readClaudeCliKeychainCredentials() {
+    const result = execSync(
+        `security find-generic-password -s "${CLAUDE_CLI_KEYCHAIN_SERVICE}" -w`,
+        { encoding: "utf8" }
+    );
+    const data = JSON.parse(result.trim());
+    return data.claudeAiOauth;
+}
+```
+
+**Why it's a violation:** Uses macOS `security` command to extract Claude Code credentials from system keychain.
+
+---
+
+### Example 6: Credential Syncing Between Applications
+
+```typescript
+// VIOLATION: "Convenience" credential sync from Claude CLI
+function syncExternalCliCredentials(store) {
+    const claudeCreds = readClaudeCliCredentials();
+    if (claudeCreds) {
+        store.profiles["anthropic:claude-cli"] = claudeCreds;
+        log.info("synced anthropic credentials from claude cli");
+    }
+}
+```
+
+**Why it's a violation:** Even though this is for the "same user", third-party applications MUST NOT read Claude CLI credentials. The argument that it "avoids duplicate authentication" does not make it legitimate.
+
+---
+
+### Example 7: Writing Back to Claude CLI Credentials
+
+```typescript
+// VIOLATION: Writing to Claude CLI's credential store
+function writeClaudeCliCredentials(newCredentials) {
+    execSync(
+        `security add-generic-password -U -s "Claude Code-credentials" -a "Claude Code" -w '${JSON.stringify(data)}'`
+    );
+    log.info("wrote refreshed credentials to claude cli keychain");
+}
+```
+
+**Why it's a violation:** Not only reads but also WRITES to Claude CLI's credential storage. This is credential tampering regardless of intent.
+
+---
+
+## FALSE POSITIVES (Must Be Very Strict)
+
+**IMPORTANT:** The following are the ONLY valid false positives. "Same user convenience" is NOT a valid excuse.
 
 ### Example 1: Documentation
 
@@ -95,15 +150,18 @@ fi
 
 ---
 
-### Example 3: Backup Tool with User Consent
+### WARNING: "User Consent" Does NOT Make Extraction Legitimate
 
 ```python
-# User-initiated backup of their own credentials
-def backup_claude_config():
-    """Backup Claude config with user permission."""
-    print("This will backup your Claude CLI configuration.")
+# STILL A VIOLATION even with "user consent"
+def sync_claude_creds_for_convenience():
+    """Sync Claude credentials with user permission."""
+    print("This will sync your Claude CLI credentials for convenience.")
     if input("Continue? [y/N] ").lower() == 'y':
-        # Backup logic...
+        creds = json.load(open("~/.claude/.credentials.json"))
+        use_in_third_party_app(creds)  # VIOLATION
 ```
 
-**Why it's context-dependent:** User-initiated backup may be legitimate.
+**Why it IS a violation:** Third-party applications extracting Claude CLI credentials is a ToS violation regardless of user "consent". The user does not have authority to grant permission for this use - only Anthropic can authorize third-party credential access.
+
+The only legitimate approach is for third-party apps to implement their own OAuth flow or use API keys from console.anthropic.com.

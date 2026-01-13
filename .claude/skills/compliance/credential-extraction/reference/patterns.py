@@ -19,6 +19,27 @@ CREDENTIAL_EXTRACTION_PATTERNS = [
         "severity": "ACTIVE_VIOLATION",
         "description": "Accessing claudeAiOauth field from credentials",
     },
+    # macOS Keychain access to Claude Code credentials
+    {
+        "name": "claude_keychain_service",
+        "regex": r"Claude Code-credentials|Claude Code.*keychain|keychain.*Claude Code",
+        "severity": "ACTIVE_VIOLATION",
+        "description": "Accessing Claude Code credentials from macOS keychain",
+    },
+    # Claude CLI credential function patterns
+    {
+        "name": "claude_cli_creds_function",
+        "regex": r"readClaudeCliCredentials|writeClaudeCliCredentials|ClaudeCliCredential",
+        "severity": "ACTIVE_VIOLATION",
+        "description": "Functions for reading/writing Claude CLI credentials",
+    },
+    # Syncing credentials from Claude CLI
+    {
+        "name": "claude_cli_sync",
+        "regex": r"sync.*claude.*cli|claude.*cli.*sync|claude.*cli.*credentials",
+        "severity": "ACTIVE_VIOLATION",
+        "description": "Syncing credentials from Claude CLI to another application",
+    },
     # ANTHROPIC_OAUTH_TOKEN environment variable
     {
         "name": "anthropic_oauth_token_env",
@@ -32,6 +53,13 @@ CREDENTIAL_EXTRACTION_PATTERNS = [
         "regex": r"(?:claude|anthropic).*(?:oauth|token).*refresh|refresh.*(?:oauth|token).*(?:claude|anthropic)",
         "severity": "POTENTIAL_VIOLATION",
         "description": "OAuth token refresh pattern detected",
+    },
+    # Generic keychain credential extraction (security command)
+    {
+        "name": "security_keychain_claude",
+        "regex": r'security\s+find-generic-password.*[Cc]laude',
+        "severity": "ACTIVE_VIOLATION",
+        "description": "Using macOS security command to extract Claude credentials from keychain",
     },
 ]
 
