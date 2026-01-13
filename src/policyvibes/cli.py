@@ -148,8 +148,24 @@ def display_report(report_path: Path):
                 color = "red" if severity == "ACTIVE_VIOLATION" else "yellow"
 
                 console.print(f"\n  [{color}]{severity}[/{color}] [{finding.get('type', 'unknown')}]")
-                console.print(f"    File: [blue]{finding.get('file', 'N/A')}:{finding.get('line', 'N/A')}[/blue]")
-                console.print(f"    Code: {finding.get('code', 'N/A')[:80]}...")
+
+                # Handle line numbers (can be single value or array)
+                line_nums = finding.get('line_numbers') or finding.get('line')
+                if isinstance(line_nums, list):
+                    line_display = ','.join(str(ln) for ln in line_nums[:5])
+                    if len(line_nums) > 5:
+                        line_display += f"... (+{len(line_nums) - 5} more)"
+                else:
+                    line_display = str(line_nums) if line_nums else 'N/A'
+
+                console.print(f"    File: [blue]{finding.get('file', 'N/A')}:{line_display}[/blue]")
+
+                # Handle code snippet (can be 'code_snippet' or 'code')
+                code = finding.get('code_snippet') or finding.get('code') or 'N/A'
+                # Show first line of code snippet, truncated
+                code_first_line = code.split('\n')[0][:80]
+                console.print(f"    Code: {code_first_line}...")
+
                 console.print(f"    Reason: {finding.get('reason', 'N/A')}")
                 if finding.get("remediation"):
                     console.print(f"    [green]Remediation: {finding.get('remediation')}[/green]")
@@ -258,13 +274,6 @@ def scan(path: str, model: str, output: str):
         if results.get("error"):
             console.print(f"[red]Error: {results['error']}[/red]")
             sys.exit(2)
-
-        # Display accumulated messages
-        if results.get("messages"):
-            console.print()
-            console.print(Panel("[bold]Agent Analysis[/bold]", style="cyan"))
-            for msg in results["messages"]:  # Show all messages without truncation
-                console.print(Markdown(msg))
 
         # Validate and display report
         report_path = results.get("report_path") or Path(path) / "POLICYVIBES_REPORT.json"
