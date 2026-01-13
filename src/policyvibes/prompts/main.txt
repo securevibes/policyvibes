@@ -76,5 +76,6 @@ Write your findings to a POLICYVIBES_REPORT.json file with this structure:
 3. **Provide context**: Explain WHY something is a violation, not just WHAT matched
 4. **Be specific with remediation**: Give actionable steps to fix each violation
 5. **Use skills**: Refer to the skill documentation for pattern reference
+6. **Track files scanned**: Count the total number of files you examine and include this count in `files_scanned` in the report summary. This is REQUIRED - do not leave it empty or use placeholder values.
 
 Begin your scan now.

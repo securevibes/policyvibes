@@ -139,6 +139,11 @@ def display_report(report_path: Path):
         if findings:
             console.print("[bold]Findings:[/bold]")
             for finding in findings:
+                # Handle string findings (agent may write notes as strings)
+                if isinstance(finding, str):
+                    console.print(f"\n  [dim]{finding}[/dim]")
+                    continue
+
                 severity = finding.get("severity", "UNKNOWN")
                 color = "red" if severity == "ACTIVE_VIOLATION" else "yellow"
 
@@ -154,6 +159,51 @@ def display_report(report_path: Path):
     except json.JSONDecodeError as e:
         console.print(f"[red]Error parsing report: {e}[/red]")
         return None
+
+
+def validate_report(report_path: Path) -> tuple[bool, list[str]]:
+    """Validate a policy report file.
+
+    Args:
+        report_path: Path to the POLICYVIBES_REPORT.json file
+
+    Returns:
+        Tuple of (is_valid, warnings) where:
+        - is_valid: True if report is valid and complete
+        - warnings: List of warning messages about issues found
+    """
+    warnings = []
+
+    # Check if file exists
+    if not report_path.exists():
+        return False, ["Report file does not exist"]
+
+    # Try to parse JSON
+    try:
+        with open(report_path) as f:
+            report = json.load(f)
+    except json.JSONDecodeError as e:
+        return False, [f"Failed to parse JSON: {e}"]
+
+    # Check for required fields
+    if "summary" not in report:
+        return False, ["Report missing required 'summary' field"]
+
+    summary = report.get("summary", {})
+
+    # Check for files_scanned
+    if "files_scanned" not in summary:
+        warnings.append("Report missing 'files_scanned' in summary")
+
+    # Check for violation counts
+    if "active_violations" not in summary:
+        warnings.append("Report missing 'active_violations' in summary")
+
+    if "potential_violations" not in summary:
+        warnings.append("Report missing 'potential_violations' in summary")
+
+    # If we have warnings but the basic structure is there, it's still valid
+    return True, warnings
 
 
 def run_sync_scan(repo_path: str, model: str) -> dict:
@@ -213,11 +263,23 @@ def scan(path: str, model: str, output: str):
         if results.get("messages"):
             console.print()
             console.print(Panel("[bold]Agent Analysis[/bold]", style="cyan"))
-            for msg in results["messages"][-3:]:  # Show last few messages
-                console.print(Markdown(msg[:500]))
+            for msg in results["messages"]:  # Show all messages without truncation
+                console.print(Markdown(msg))
 
-        # Display report if generated
+        # Validate and display report
         report_path = results.get("report_path") or Path(path) / "POLICYVIBES_REPORT.json"
+
+        # Validate report before displaying
+        is_valid, warnings = validate_report(report_path)
+        if warnings:
+            console.print()
+            for warning in warnings:
+                console.print(f"[yellow]Warning: {warning}[/yellow]")
+
+        if not is_valid:
+            console.print("[red]Report validation failed. Results may be incomplete.[/red]")
+            sys.exit(2)
+
         report = display_report(report_path)
 
         if report:
